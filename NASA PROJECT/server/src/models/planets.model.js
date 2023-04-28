@@ -2,7 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const { parse } = require('csv-parse');
 
-const habitablePlanet = [];
+const planet = require('./planets.mongo');
+
+// const habitablePlanet = [];
 
 const filePath = path.join(__dirname, '../../data/kepler_data.csv');
 
@@ -17,9 +19,13 @@ function loadPlanetsData() {
                 comment: '#',
                 columns: true
             }))
-            .on('data', data => {
+            .on('data', async (data) => {
                 if (isHabitablePlanet(data)) {
-                    habitablePlanet.push(data);
+                    // habitablePlanet.push(data);
+                    // insert + update = upsert
+                    planet.create({
+                        keplerName: data.kepler_name,
+                    });
                 }
             })
             .on('error', err => {
