@@ -2,7 +2,10 @@ const mongoose = require('mongoose');
 
 const launchesSchema = new mongoose.Schema(
     {
-        flightNumber: Number,
+        flightNumber: {
+            type: Number,
+            required: true
+        },
         mission: {
             type: String,
             required: true
@@ -20,7 +23,7 @@ const launchesSchema = new mongoose.Schema(
             required: true
         },
         customers: {
-            type: [String],
+            type: [ String ],
             required: true
         },
         upcoming: {

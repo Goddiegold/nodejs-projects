@@ -1,7 +1,12 @@
 const request = require('supertest');
 const app = require('../../app');
+const { mongooseConnect, mongooseDisconnect } = require('../../utils/mongo');
 
 describe('Launches API', () => {
+    beforeAll(async () => await mongooseConnect(), 10000);
+
+    afterAll(async () => await mongooseDisconnect());
+    
     describe('Test GET /launches', () => {
         test('It should respond with an array of launches', async () => {
             const response = await request(app).get('/launches');
@@ -16,7 +21,7 @@ describe('Launches API', () => {
                 mission: 'test mission',
                 rocket: 'test rocket',
                 launchDate: '2030-12-27T00:00:00.000Z',
-                target: 'test target',
+                target: 'Kepler-296 e',
             };
             const response = await request(app).post('/launches').send(newLaunch);
             expect(response.statusCode).toBe(201);
@@ -38,7 +43,7 @@ describe('Launches API', () => {
                 mission: 'test mission',
                 rocket: 'test rocket',
                 launchDate: 'invalid date',
-                target: 'test target',
+                target: 'Kepler-296 e',
             };
             const response = await request(app).post('/launches').send(invalidLaunch);
             expect(response.statusCode).toBe(400);
@@ -52,7 +57,7 @@ describe('Launches API', () => {
                 mission: 'test mission',
                 rocket: 'test rocket',
                 launchDate: '2030-12-27T00:00:00.000Z',
-                target: 'test target',
+                target: 'Kepler-296 e',
             };
             const responseCreate = await request(app).post('/launches').send(newLaunch);
             expect(responseCreate.statusCode).toBe(201);
@@ -60,11 +65,7 @@ describe('Launches API', () => {
 
             const responseDelete = await request(app).delete(`/launches/${responseCreate.body.flightNumber}`);
             expect(responseDelete.statusCode).toBe(200);
-            expect(responseDelete.body).toMatchObject({
-                ...newLaunch,
-                upcoming: false,
-                success: false,
-            });
+            expect(responseDelete.body).toEqual({ ok: 'Launch aborted' });
         });
 
         test('It should respond with 404 if launch not found', async () => {
