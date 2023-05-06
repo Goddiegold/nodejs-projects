@@ -1,24 +1,29 @@
+// Import the necessary modules
 const path = require('path');
 const express = require('express');
-const app = express();
 const cors = require('cors');
 const morgan = require('morgan');
 
-const planetsRouter = require('./routes/planets/planets.router')
-const launchesRouter = require('./routes/launches/launches.router')
+const app = express();
 
+const api = require('./routes/api')
+
+// Enable CORS for requests from http://localhost:3000
 app.use(cors({ origin: 'http://localhost:3000' }));
 
+// Log incoming requests to the console
 app.use(morgan('combined'));
 
-app.use(express.static(path.join(__dirname, '..', 'public')));
- 
+// Parse incoming JSON requests
 app.use(express.json());
 
-app.use('/planets', planetsRouter)
+// Serve static files from the public folder
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
-app.use('/launches', launchesRouter);
+// Use the API routes and make the route use versioning
+app.use('/v1', api);
 
+// Serve the index.html file for any unmatched routes
 app.get('/*', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'index.html'))
 })

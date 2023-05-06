@@ -20,12 +20,8 @@ const launchesSchema = new mongoose.Schema(
         },
         target: {
             type: String,
-            required: true
         },
-        customers: {
-            type: [ String ],
-            required: true
-        },
+        customers: [ String ],
         upcoming: {
             type: Boolean,
             required: true
@@ -38,5 +34,5 @@ const launchesSchema = new mongoose.Schema(
     }
 );
 
-// Connects the launchesSchema to the "launches" collection
+// Connects launchesSchema with the "launches" collection
 module.exports = mongoose.model('Launch', launchesSchema);
