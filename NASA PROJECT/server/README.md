@@ -1,6 +1,6 @@
 # NASA Mission Control Project
 
-This is a Node.js API project that demonstrates how to perform CRUD (Create, Read, Update, Delete) operations on a database and utilize JSON Web Tokens (JWT) for user authentication. It includes endpoints for creating, reading, updating, and deleting users, as well as for retrieving all users and filtering by gender. The project uses the popular Express.js framework and MongoDB for the database.
+This API lets the mission control dashboard frontend schedule missions, view historical data using the [SpaceX API](https://github.com/r-spacex/SpaceX-API), and view upcoming data. The project uses the popular Express.js framework and MongoDB Atlas for the database.
 
 ## Prerequisites
 
