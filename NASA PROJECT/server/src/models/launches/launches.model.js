@@ -4,7 +4,7 @@ const axios = require('axios')
 // Import launchesDatabase and planets modules, which provides functions 
 // to interact with the planets and lanuches collection in the database
 const launchesDatabase = require('./launches.mongo');
-const planets = require('../planets/planets.model');
+const planets = require('../planets/planets.mongo');
 
 // The SpaceX API endpoint for querying launches
 const SPACEX_API_URL = 'https://api.spacexdata.com/v4/launches/query';
