@@ -6,7 +6,6 @@ const userSchema = new mongoose.Schema({
     name: {
       type: String,
       required: [true, 'Please enter a name'],
-      trim: true,
       maxlength: [50, 'Name must be at most 50 characters'],
     },
     email: {
@@ -26,6 +25,8 @@ const userSchema = new mongoose.Schema({
     phone: {
       type: String,
       required: [true, 'Please enter a password'],
+      trim: true,
+      minlength: [3, 'Number must be at least 11 characters'],
       maxlength: [15, 'Number must be at most 15 characters'],
     },
     isAdmin: {
@@ -53,6 +54,14 @@ const userSchema = new mongoose.Schema({
         default: ''
     }
 
+});
+
+userSchema.virtual('id').get(function () {
+    return this._id.toHexString();
+});
+
+userSchema.set('toJSON', {
+    virtuals: true,
 });
 
 userSchema.pre('save', async function (next) {
