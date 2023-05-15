@@ -1,4 +1,5 @@
 const path = require('path');
+const mongoose = require('mongoose');
 const multer = require('multer');
 
 const Product = require('../../models/products.model');
@@ -156,6 +157,34 @@ async function httpUpdateProduct(req, res) {
     }
 }
 
+async function httpUpdateProductImages(req, res) {
+    try {
+        if (!mongoose.isValidObjectId(req.params.id))
+            return res.status(400).send('Invalid Product Id');
+
+        const files = req.files
+        if (!files) return res.status(400).send('No images in the request');
+
+        let imagesPaths = [];
+
+        const basePath = `${req.protocol}://${req.get('host')}/public/uploads/`;
+
+        files.map(file => { imagesPaths.push(`${basePath}${file.filename}`) });
+
+        const product = await Product.findByIdAndUpdate(
+            req.params.id,
+            { images: imagesPaths },
+            { new: true }
+        )
+
+        const updatedProduct = await product.save();
+
+        res.status(200).json({ updatedProduct });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
 async function httpDeleteProduct(req, res) {
     try {
         const product = await Product.deleteOne({ _id: req.params.id });
@@ -168,6 +197,8 @@ async function httpDeleteProduct(req, res) {
     }
 }
 
+
+
 module.exports = {
     httpGetProducts,
     httpGetProductByID,
@@ -175,6 +206,7 @@ module.exports = {
     httpGetFetaturedProducts,
     httpPostProduct,
     httpUpdateProduct,
+    httpUpdateProductImages,
     httpDeleteProduct,
     uploadOptions
 }

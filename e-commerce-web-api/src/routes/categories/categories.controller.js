@@ -1,3 +1,5 @@
+const mongoose = require('mongoose');
+
 const Category = require('../../models/categories.model');
 
 async function httpGetCategories(req, res) {
@@ -14,11 +16,13 @@ async function httpGetCategories(req, res) {
 
 async function httpGetCategoryByID(req, res) {
     try {
-        const id = req.params.id
-        const category = await Category.findById(id);
+        if (!mongoose.isValidObjectId(req.params.id))
+            return res.status(400).send('Invalid Category Id');
+
+        const category = await Category.findById(req.params.id);
 
         if (!category) return res.status(404)
-            .json({ error: `Category with ID ${id} not found` });
+            .json({ error: `Category not found` });
 
         res.status(200).json({ category });
     } catch (error) {
