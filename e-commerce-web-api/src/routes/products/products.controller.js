@@ -1,5 +1,32 @@
+const path = require('path');
+const multer = require('multer');
+
 const Product = require('../../models/products.model');
 const Category = require('../../models/categories.model');
+
+const FILE_TYPE_MAP = {
+    'image/png': 'png',
+    'image/jpeg': 'jpeg',
+    'image/jpg': 'jpg'
+}
+
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const isValid = FILE_TYPE_MAP[file.mimetype];
+        let uploadError = new Error('invalid image type');
+
+        if (isValid) return uploadError = null
+        
+        cb(uploadError, path.join(__dirname, '../../../public/uploads'))
+    },
+    filename: (req, file, cb) => {
+        const fileName = file.originalname.replace(' ', '-');
+        const extension = FILE_TYPE_MAP[file.mimetype];
+        cb(null, `${fileName}-${Date.now()}.${extension}`)
+    }
+})
+
+const uploadOptions = multer({ dest: storage })
 
 async function httpGetProducts(req, res) {
     try {
@@ -63,14 +90,19 @@ async function httpPostProduct(req, res) {
         const category = await Category.findById(req.body.category);
 
         if (!category) return res.status(404).json({ error: 'Invaild Category ID' });
+
+        const file = req.file
+        if (!file) return res.status(400).send('No image in the request');
+
+        const fileName = file.filename;
+        const basePath = `${req.protocol}://${req.get('host')}/public/uploads/`;
         
         const newCreatedproduct = await Product.create(
             {
                 name: req.body.name,
                 description: req.body.description,
                 richDescription: req.body.richDescription,
-                image: req.body.image,
-                images: req.body.images,
+                image: `${basePath}${fileName}`,
                 brand: req.body.brand,
                 price: req.body.price,
                 category: req.body.category,
@@ -94,14 +126,19 @@ async function httpUpdateProduct(req, res) {
 
         if (!id) return res.status(404).json({ error: 'Product not found' });
 
+        const file = req.file
+        if (!file) return res.status(400).send('No image in the request');
+
+        const fileName = file.filename;
+        const basePath = `${req.protocol}://${req.get('host')}/public/uploads/`;
+
         const product = await Product.findByIdAndUpdate(
             req.params.id,
             {
                 name: req.body.name,
                 description: req.body.description,
                 richDescription: req.body.richDescription,
-                image: req.body.image,
-                images: req.body.images,
+                image: `${basePath}${fileName}`,
                 brand: req.body.brand,
                 price: req.body.price,
                 category: req.body.category,
@@ -138,5 +175,6 @@ module.exports = {
     httpGetFetaturedProducts,
     httpPostProduct,
     httpUpdateProduct,
-    httpDeleteProduct
+    httpDeleteProduct,
+    uploadOptions
 }

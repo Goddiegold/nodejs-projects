@@ -26,6 +26,18 @@ async function httpGetUserByID(req, res) {
     }
 }
 
+async function httpGetUsersCount(req, res) {
+    try {
+        const usersCount = await PUser.countDocuments();
+
+        if (usersCount === 0) return res.status(404).json({ error: 'There is no user yet' });
+
+        res.status(200).json({ usersCount });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
 async function httpRegisterUser(req, res) {
     try {
         const newCreatedUser = await User.create(
@@ -95,6 +107,7 @@ async function httpDeleteUser(req, res) {
 module.exports = {
     httpGetUsers,
     httpGetUserByID,
+    httpGetUsersCount,
     httpRegisterUser,
     httpUpdateUser,
     httpDeleteUser

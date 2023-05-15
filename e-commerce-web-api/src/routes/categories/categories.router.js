@@ -1,6 +1,6 @@
 const express = require('express');
 const categoriesRouter = express.Router();
-const { authenticateToken } = require('../authenticate/auth.controller');
+// const { authenticateToken } = require('../authenticate/auth.controller');
 
 const {
     httpGetCategories,
@@ -12,8 +12,8 @@ const {
 
 categoriesRouter.get('/', httpGetCategories);
 categoriesRouter.get('/:id', httpGetCategoryByID);
-categoriesRouter.post('/', authenticateToken, httpPostCategory);
-categoriesRouter.put('/:id', authenticateToken, httpUpdateCategory);
-categoriesRouter.delete('/:id', authenticateToken, httpDeleteCategory);
+categoriesRouter.post('/', httpPostCategory);
+categoriesRouter.put('/:id', httpUpdateCategory);
+categoriesRouter.delete('/:id', httpDeleteCategory);
 
 module.exports = categoriesRouter;

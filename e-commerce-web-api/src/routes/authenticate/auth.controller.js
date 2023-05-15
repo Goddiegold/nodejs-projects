@@ -1,4 +1,5 @@
 const bcrypt = require('bcrypt');
+const expressJwt = require('express-jwt');
 const jwt = require('jsonwebtoken');
 require('dotenv').config()
 
@@ -23,7 +24,11 @@ async function login(req, res) {
         if (!auth) throw new Error('Incorrect email or password');
 
         // Generate JWT token and send it to the client
-        const accessToken = jwt.sign({ _id: user._id }, process.env.JWT_SECRET_ACCESS_TOKEN, { expiresIn: '24h' });
+        const accessToken = jwt.sign(
+            { _id: user._id, isAdmin: user.isAdmin },
+            process.env.JWT_SECRET_ACCESS_TOKEN,
+            { expiresIn: '24h' }
+        );
         
         // Add the token to the whitelist
         const whitelistedToken = new TokenWhitelist({ token: accessToken });
@@ -59,8 +64,44 @@ async function logout(req, res) {
     }
 }
 
-// Middleware to authenticate requests
-async function authenticateToken(req, res, next) {
+// Middleware to authenticate requests for Admin
+async function authenticateTokenAdmin(req, res, next) {
+    try {
+        // Extract the Authorization header and the token from it
+        const authHeader = req.header('Authorization');
+
+        // If no authHeader is present, return an error response
+        if (!authHeader) return res.status(401).json({ message: 'Unauthorized' });
+
+        const token = authHeader.split(' ')[1];
+
+        // Check if token is in the blacklist
+        const blacklistedToken = await TokenBlacklist.findOne({ token });
+        if (blacklistedToken) return res.status(401).json({ message: 'Unauthorized' });
+
+        const revoked = async (req, payload, done) => {
+            if (!payload.isAdmin) {
+                done(null, true)
+            }
+
+            done();
+        }
+
+        // Verify the token and pass the decoded payload to the next middleware
+        const jwtCheck = expressJwt({
+            secret: process.env.JWT_SECRET_ACCESS_TOKEN,
+            algorithms: process.env.JWT_ALGORITHM,
+            isRevoked: revoked
+        })
+
+        jwtCheck(req, res, next);
+    } catch (error) {
+        res.status(401).json({ Error: error.message });
+    }
+}
+
+// Middleware to authenticate requests for customers
+async function authenticateTokenCustomer(req, res, next) {
     try {
         // Extract the Authorization header and the token from it
         const authHeader = req.header('Authorization');
@@ -75,14 +116,12 @@ async function authenticateToken(req, res, next) {
         if (blacklistedToken) return res.status(401).json({ message: 'Unauthorized' });
 
         // Verify the token and pass the decoded payload to the next middleware
-        const decoded = jwt.verify(
-            token,
-            process.env.JWT_SECRET_ACCESS_TOKEN,
-            { algorithms: process.env.JWT_ALGORITHM }
-        )
-        
-        req.user = decoded;
-        next();
+        const jwtCheck = expressJwt({
+            secret: process.env.JWT_SECRET_ACCESS_TOKEN,
+            algorithms: process.env.JWT_ALGORITHM,
+        });
+
+        jwtCheck(req, res, next);
     } catch (error) {
         res.status(401).json({ Error: error.message });
     }
@@ -91,5 +130,6 @@ async function authenticateToken(req, res, next) {
 module.exports = {
     login,
     logout,
-    authenticateToken,
+    authenticateTokenAdmin,
+    authenticateTokenCustomer
 }
