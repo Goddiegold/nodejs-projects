@@ -1,8 +1,10 @@
+const mongoose = require('mongoose');
+
 const User = require('../../models/users.model');
 
 async function httpGetUsers(req, res) {
     try {
-        const users = await User.find({}, { '__v': 0, password: 0});
+        const users = await User.find({}, { '__v': 0, password: 0 }).sort({ name: +1 });
 
         if (users.length === 0) return res.status(404).json({ error: 'No user found' });
 
@@ -14,13 +16,16 @@ async function httpGetUsers(req, res) {
 
 async function httpGetUserByID(req, res) {
     try {
-        const id = req.params.id
-        const user = await User.findById(id, { '__v': 0, password: 0});
+        if (!mongoose.isValidObjectId(req.params.id))
+            return res.status(400).send('Invalid User Id');
+        
+        const user = await User.findById(req.params.id, { '__v': 0, password: 0});
 
-        if (!user) return res.status(404)
-            .json({ error: `User with ID ${id} not found` });
+        if (!user) return res.status(404).json({ error: `User not found` });
 
-        res.status(200).json({ user });
+        const { name, email, isAdmin } = user;
+
+        res.status(200).json({ name, email, isAdmin });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -28,7 +33,7 @@ async function httpGetUserByID(req, res) {
 
 async function httpGetUsersCount(req, res) {
     try {
-        const usersCount = await PUser.countDocuments();
+        const usersCount = await User.countDocuments();
 
         if (usersCount === 0) return res.status(404).json({ error: 'There is no user yet' });
 
@@ -38,55 +43,28 @@ async function httpGetUsersCount(req, res) {
     }
 }
 
-async function httpRegisterUser(req, res) {
-    try {
-        const newCreatedUser = await User.create(
-            {
-                name: req.body.name,
-                email: req.body.email,
-                password: req.body.password,
-                phone: req.body.phone,
-                isAdmin: req.body.isAdmin,
-                street: req.body.street,
-                apartment: req.body.apartment,
-                zip: req.body.zip,
-                city: req.body.city,
-                country: req.body.country
-            }
-        )
-
-        res.status(201).json({ newCreatedUser });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-}
-
 async function httpUpdateUser(req, res) {
     try {
-        const id = await User.findById(req.params.id);
+        if (!mongoose.isValidObjectId(req.params.id))
+            return res.status(400).send('Invalid User Id');
+        
+        const userId = await User.findById(req.params.id);
+        if (!userId) return res.status(404).json({ error: 'User not found' });
 
-        if (!id) return res.status(404).json({ error: 'User not found' });
-
-        const user = await Category.findByIdAndUpdate(
+        const user = await User.findByIdAndUpdate(
             req.params.id,
             {
                 name: req.body.name,
                 email: req.body.email,
                 password: req.body.password,
-                phone: req.body.phone,
-                isAdmin: req.body.isAdmin,
-                street: req.body.street,
-                apartment: req.body.apartment,
-                zip: req.body.zip,
-                city: req.body.city,
-                country: req.body.country
             },
             { new: true }
         )
 
         const updatedUser = await user.save();
 
-        res.status(200).json({ updatedUser });
+        const { id, name, email } = updatedUser;
+        res.status(200).json({ id, name, email });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -108,7 +86,6 @@ module.exports = {
     httpGetUsers,
     httpGetUserByID,
     httpGetUsersCount,
-    httpRegisterUser,
     httpUpdateUser,
     httpDeleteUser
 }

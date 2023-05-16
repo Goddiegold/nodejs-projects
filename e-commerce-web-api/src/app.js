@@ -8,12 +8,19 @@ const api = require('./routes/api')
 
 const app = express();
 
+// Security configuration
 app.use(helmet());
-app.use(cors({ origin: 'http://localhost:3000' }));
-app.use(morgan('combined'));
+app.use(cors());
+app.options('*', cors())
+
+// Enable parsing Json payload  in the request body
 app.use(express.json());
 
-app.use('/public/uploads', express.static(__dirname + '../public/uploads'));
+// Logs information about incoming requests and outgoing responses in the terminal
+app.use(morgan('combined'));
+
+// Routes
+app.use('/public/uploads', express.static(__dirname + '/../public/uploads'));
 app.use('/api/v1', api);
 
 module.exports = app;

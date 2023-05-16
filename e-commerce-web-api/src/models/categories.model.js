@@ -7,19 +7,13 @@ const categorySchema = mongoose.Schema({
     },
     icon: {
         type: String,
+        default: '',
     },
-    color: { 
+    color: {
         type: String,
+        default: '',
     }
-})
-
-categorySchema.virtual('id').get(function () {
-    return this._id.toHexString();
-});
-
-categorySchema.set('toJSON', {
-    virtuals: true,
-});
+}, { timestamps: true });
 
 const Category = mongoose.model('Category', categorySchema);
 

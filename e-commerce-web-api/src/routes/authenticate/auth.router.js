@@ -1,11 +1,10 @@
-const express = require('express');
-const authRouter = express.Router();
-const { login, logout, authenticateToken } = require('./auth.controller');
+const authRouter = require('express').Router();
 
-// Define a route that calls the "login" function.
-router.post('/login', login);
+const { httpRegisterUser, httpLoginUser, httpLogoutUser } = require('./auth.controller');
+const { authUser } = require('../../utils/authMiddleware/auth');
 
-// Define a route that calls the "logout" function.
-router.post('/logout', authenticateToken, logout);
+authRouter.post('/register', httpRegisterUser);
+authRouter.post('/login', httpLoginUser);
+authRouter.post('/logout', authUser, httpLogoutUser);
 
 module.exports = authRouter;

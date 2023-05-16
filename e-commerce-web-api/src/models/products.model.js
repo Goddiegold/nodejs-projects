@@ -2,23 +2,18 @@ const mongoose = require('mongoose');
 
 const productSchema = mongoose.Schema({
     name: {
-      type: String,
-      required: [true, 'Please enter the product name'],
-      maxlength: [50, 'Name must be at most 50 characters'],
+        type: String,
+        required: [true, 'Please enter the product name'],
+        maxlength: [50, 'Name must be at most 50 characters'],
     },
     description: {
-      type: String,
-      required: [true, 'Please enter the description'],
-      maxlength: [200, 'Description must be at most 200 characters'],
-    },
-    richDescription: {
         type: String,
-        default: '',
-        maxlength: [200, 'Rich description must be at most 200 characters'],
+        required: [true, 'Please enter the description'],
+        maxlength: [200, 'Description must be at most 200 characters'],
     },
     image: {
         type: String,
-        default: ''
+        required: [true, 'Please upload an image for your product']
     },
     images: [{ type: String }],
     brand: {
@@ -26,9 +21,9 @@ const productSchema = mongoose.Schema({
         default: '',
         maxlength: [20, 'Brand must be at most 20 characters']
     },
-    price : {
+    price: {
         type: Number,
-        default: 0
+        required: [true, 'Please enter the price of your product']
     },
     category: {
         type: mongoose.Schema.Types.ObjectId,
@@ -37,34 +32,15 @@ const productSchema = mongoose.Schema({
     },
     countInStock: {
         type: Number,
-        required: true,
+        default: 1,
         min: 0,
         max: 255
-    },
-    rating: {
-        type: Number,
-        default: 0,
-    },
-    numReviews: {
-        type: Number,
-        default: 0,
     },
     isFeatured: {
         type: Boolean,
         default: false,
     },
-    dateCreated: {
-        type: Date,
-        default: Date.now,
-    },
-})
-
-productSchema.virtual('id').get(function () {
-    return this._id.toHexString();
-});
-productSchema.set('toJSON', {
-    virtuals: true,
-});
+}, { timestamps: true });
 
 const Product = mongoose.model('Product', productSchema);
 

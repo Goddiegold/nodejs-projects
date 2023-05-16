@@ -1,11 +1,16 @@
+const mongoose = require('mongoose');
+
 const Order = require('../../models/orders.model');
-const OrderItem = require('../../models/order_items.model');
+const User = require('../../models/users.model');
+const Product = require('../../models/products.model');
+const Cart = require('../../models/carts.model');
 
 async function httpGetOrders(req, res) {
     try {
         const orders = await Order.find({}, { '__v': 0 })
-            .populate('user', 'name')
-            .sort({ 'orderItemIds': -1 });
+            .populate({ path: 'user', select: '-_id name' })
+            .populate({ path: 'carts', select: '-_id name' })
+            .sort('+createdAt')
 
         if (orders.length === 0) return res.status(404).json({ error: 'No Order found' });
 
@@ -17,16 +22,15 @@ async function httpGetOrders(req, res) {
 
 async function httpGetOrderByID(req, res) {
     try {
-        const id = req.params.id
-        const order = await Order.findById(id)
-            .populate('user', 'name')
-            .populate({
-                path: 'orderItems',
-                populate: { path: 'product', populate: 'category' }
-            });
+        if (!mongoose.isValidObjectId(req.params.id))
+            return res.status(400).send({ message: 'Invalid order Id' });
+        
+        const order = await Order.findById(req.params.id)
+            .populate({ path: 'user', select: '-_id name' })
+            .populate({ populate: { path: 'product', populate: 'category' } });
 
         if (!order) return res.status(404)
-            .json({ error: `Order with ID ${id} not found` });
+            .json({ error: `Order not found` });
 
         res.status(200).json({ order });
     } catch (error) {
@@ -36,12 +40,15 @@ async function httpGetOrderByID(req, res) {
 
 async function httpGetUserOrdersByID(req, res) {
     try {
-        const userOrders = await Order.find({ user: req.params.id }, { '__v': 0 })
-            .populate({
-                path: 'orderItems',
-                populate: { path: 'product', populate: 'category' }
-            })
-            .sort({ 'orderItemIds': -1 })
+        if (!mongoose.isValidObjectId(req.params.id))
+            return res.status(400).send({ message: 'Invalid user Id' });
+        
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const userOrders = await Order.find({ user: user._id })
+            .populate({ path: 'user', select: '-_id name' })
+            .populate({ populate: { path: 'product', populate: 'category' } });
 
         if (userOrders.length === 0) return res.status(404).json({ error: 'No Order found' });
 
@@ -79,41 +86,64 @@ async function httpGetOrdersCount(req, res) {
 
 async function httpPostOrder(req, res) {
     try {
-        const orderItemIds = Promise.all(req.body.orderItems.map(async (orderItem) => {
-            let newOrderItem = await OrderItem.create(
+        if (!Array.isArray(req.body.carts)) {
+            return res.status(400).json({ error: 'Invalid cart data' });
+        }
+
+        const cartItemIds = Promise.all(req.body.carts.map(async (cartItem) => {
+            if (cartItem.product) {
+                if (!mongoose.isValidObjectId(cartItem.product))
+                return res.status(400).send('Invalid user Id');
+                
+                const product = await Product.findById(cartItem.product);
+                if (!product) return res.status(404).json({ error: 'Product not found' });
+            }
+
+            if (cartItem.user) {
+                if (!mongoose.isValidObjectId(cartItem.user))
+                return res.status(400).send('Invalid product Id');
+                
+                const user = await User.findById(cartItem.user);
+                if (!user) return res.status(404).json({ error: 'User not found' });
+            }
+
+            let newCreatedCart = await Cart.create(
                 {
-                    quantity: orderItem.quantity,
-                    product: orderItem.product
+                    quantity: cartItem.quantity,
+                    product: cartItem.product,
+                    user: cartItem.user
                 }
             )
 
-            return newOrderItem._id;
-        })); 
-
-        const orderItemIdsResolved = await orderItemIds;
-
-        const totalPriceCalculated = Promise.all(orderItemIdsResolved.map(async (orderItemId) => {
-            let orderItem = await OrderItem.findById(orderItemId).populate('product', 'price')
-
-            const totalPrice = orderItem.product.price * orderItem.quantity;
-            return totalPrice.reduce((a, b) => a + b, 0);
+            return newCreatedCart._id;
         }));
+
+        const cartItemIdsResolved = await cartItemIds;
+
+        const totalPriceCalculated = await Promise.all(cartItemIdsResolved.map(async (cartItemId) => {
+            let cartItem = await Cart.findById(cartItemId)
+                .populate('product', 'price')
+
+            const totalPrice = cartItem.product.price * cartItem.quantity;
+            return totalPrice;
+        }));
+
+        const totalPrice = totalPriceCalculated.reduce((a, b) => a + b, 0);
 
         const newCreatedOrder = await Order.create(
             {
-                orderItems: orderItemIdsResolved,
+                carts: cartItemIdsResolved,
                 shippingAddress1: req.body.shippingAddress1,
                 shippingAddress2: req.body.shippingAddress2,
                 city: req.body.city,
                 zip: req.body.zip,
                 country: req.body.country,
                 phone: req.body.phone,
-                status: req.body.status,
-                totalPrice: totalPriceCalculated,
+                totalPrice: totalPrice,
                 user: req.body.user
             }
         )
-
+            console.log('newCreatedOrder:', newCreatedOrder);
         res.status(201).json({ newCreatedOrder });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -122,37 +152,9 @@ async function httpPostOrder(req, res) {
 
 async function httpUpdateOrder(req, res) {
     try {
-        const id = await Order.findById(req.params.id);
-
-        if (!id) return res.status(404).json({ error: 'Order not found' });
-
-        const order = await Order.findByIdAndUpdate(
-            req.params.id,
-            {
-                orderItems: req.body.orderItems,
-                shippingAddress1: req.body.shippingAddress1,
-                shippingAddress2: req.body.shippingAddress2,
-                city: req.body.city,
-                zip: req.body.zip,
-                country: req.body.country,
-                phone: req.body.phone,
-                status: req.body.status,
-                totalPrice: req.body.totalPrice,
-                user: req.body.user
-            },
-            { new: true }
-        )
-
-        const updatedOrder = await order.save();
-
-        res.status(200).json({ updatedOrder });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-}
-
-async function httpUpdateOrderStatus(req, res) {
-    try {
+        if (!mongoose.isValidObjectId(req.params.id))
+            return res.status(400).send('Invalid order Id');
+        
         const id = await Order.findById(req.params.id);
 
         if (!id) return res.status(404).json({ error: 'Order not found' });
@@ -173,12 +175,15 @@ async function httpUpdateOrderStatus(req, res) {
 
 async function httpDeleteOrder(req, res) {
     try {
-        const orderDetail = await Order.findById(req.params.id);
+        if (!mongoose.isValidObjectId(req.params.id))
+            return res.status(400).send('Invalid user Id');
+        
+        const orderDetail = await Order.find({ user: req.params.id });
         if (!orderDetail) return res.status(404).json({ error: 'Order not found' });
 
-        const items = orderDetail.orderItems;
+        const items = orderDetail.carts;
         items.forEach(async item => {
-            await OrderItem.deleteOne({ _id: item })
+            await Cart.deleteOne({ _id: item })
         });
 
         const order = await Order.deleteOne({ _id: orderDetail._id });
@@ -199,6 +204,5 @@ module.exports = {
     httpGetOrdersCount,
     httpPostOrder,
     httpUpdateOrder,
-    httpUpdateOrderStatus,
     httpDeleteOrder
 }

@@ -1,4 +1,3 @@
-const path = require('path');
 const mongoose = require('mongoose');
 const multer = require('multer');
 
@@ -12,31 +11,38 @@ const FILE_TYPE_MAP = {
 }
 
 const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
+    destination: (req, file, callback) => {
         const isValid = FILE_TYPE_MAP[file.mimetype];
-        let uploadError = new Error('invalid image type');
-
-        if (isValid) return uploadError = null
         
-        cb(uploadError, path.join(__dirname, '../../../public/uploads'))
+        if (!isValid) {
+            const uploadError = new Error('Invalid image type');
+            return callback(uploadError);
+        }
+
+        callback(null, __dirname + '../../../../public/uploads')
     },
-    filename: (req, file, cb) => {
+    filename: (req, file, callback) => {
         const fileName = file.originalname.replace(' ', '-');
         const extension = FILE_TYPE_MAP[file.mimetype];
-        cb(null, `${fileName}-${Date.now()}.${extension}`)
+        callback(null, `${fileName}-${Date.now()}.${extension}`)
     }
 })
 
-const uploadOptions = multer({ dest: storage })
+const uploads = multer({ storage: storage })
 
 async function httpGetProducts(req, res) {
     try {
         let filter = {};
         if (req.query.categories) {
+            if (!mongoose.isValidObjectId(req.query.categories))
+                return res.status(400).send('Invalid categories Id');
+            
             filter = { category: req.query.categories.split(',') };
         }
             
         const products = await Product.find(filter)
+            .select('name price image isFeatured')
+            .sort('+name')
 
         if (products.length === 0) return res.status(404).json({ error: 'No product found' });
 
@@ -48,7 +54,12 @@ async function httpGetProducts(req, res) {
 
 async function httpGetProductByID(req, res) {
     try {
-        const product = await Product.findById(req.params.id).populate('category');
+        if (!mongoose.isValidObjectId(req.params.id))
+            return res.status(400).send('Invalid Product Id');
+        
+        const product = await Product.findById(req.params.id)
+            .select('-_id -__v')
+            .populate({ path: 'category', select: '-_id name' });
 
         if (!product) return res.status(404).json({ error: 'Product not found' });
 
@@ -76,7 +87,7 @@ async function httpGetFetaturedProducts(req, res) {
 
         const featuredProducts = await Product.find({ isFeatured: true })
             .limit(+count)
-            .populate('category')
+            .select('name price image isFeatured')
         
         if (featuredProducts.length === 0) return res.status(404).json({ error: 'No featured products' });
 
@@ -90,7 +101,10 @@ async function httpPostProduct(req, res) {
     try {
         const category = await Category.findById(req.body.category);
 
-        if (!category) return res.status(404).json({ error: 'Invaild Category ID' });
+        if (!mongoose.isValidObjectId(category._id))
+            return res.status(400).send('Invalid Category Id');
+        
+        if (!category) return res.status(404).json({ error: 'Category not found' });
 
         const file = req.file
         if (!file) return res.status(400).send('No image in the request');
@@ -102,20 +116,16 @@ async function httpPostProduct(req, res) {
             {
                 name: req.body.name,
                 description: req.body.description,
-                richDescription: req.body.richDescription,
                 image: `${basePath}${fileName}`,
                 brand: req.body.brand,
                 price: req.body.price,
                 category: req.body.category,
                 countInStock: req.body.countInStock,
-                rating: req.body.rating,
-                numReviews: req.body.numReviews,
                 isFeatured: req.body.isFeatured,
-                dateCreated: req.body.dateCreated
             }
         )
-
-        res.status(201).json({ newCreatedproduct });
+        const { _id, name, isFeatured } = newCreatedproduct;
+        res.status(201).json({ _id, name, isFeatured });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -138,7 +148,6 @@ async function httpUpdateProduct(req, res) {
             {
                 name: req.body.name,
                 description: req.body.description,
-                richDescription: req.body.richDescription,
                 image: `${basePath}${fileName}`,
                 brand: req.body.brand,
                 price: req.body.price,
@@ -150,8 +159,11 @@ async function httpUpdateProduct(req, res) {
         )
 
         const updatedProduct = await product.save();
+        const { name, description, image, brand, price, category, countInStock, isFeatured }
+            = updatedProduct;
 
-        res.status(200).json({ updatedProduct });
+        res.status(200)
+            .json({ name, description, image, brand, price, category, countInStock, isFeatured });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -163,13 +175,13 @@ async function httpUpdateProductImages(req, res) {
             return res.status(400).send('Invalid Product Id');
 
         const files = req.files
-        if (!files) return res.status(400).send('No images in the request');
 
         let imagesPaths = [];
-
         const basePath = `${req.protocol}://${req.get('host')}/public/uploads/`;
 
-        files.map(file => { imagesPaths.push(`${basePath}${file.filename}`) });
+        if (files) {
+            files.map(file => { imagesPaths.push(`${basePath}${file.filename}`) });
+        }
 
         const product = await Product.findByIdAndUpdate(
             req.params.id,
@@ -179,7 +191,9 @@ async function httpUpdateProductImages(req, res) {
 
         const updatedProduct = await product.save();
 
-        res.status(200).json({ updatedProduct });
+        const { name, images } = updatedProduct;
+
+        res.status(200).json({ name, images });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -187,17 +201,18 @@ async function httpUpdateProductImages(req, res) {
 
 async function httpDeleteProduct(req, res) {
     try {
+        if (!mongoose.isValidObjectId(req.params.id))
+            return res.status(400).send('Invalid Product Id');
+         
         const product = await Product.deleteOne({ _id: req.params.id });
 
-        if (product.deletedCount === 0) return res.status(404).json({ error: 'Product not found' });
+        if (product.deletedCount === 0) return res.status(404).json({ message: 'Product not found' });
 
         res.status(200).json({ message: 'Product has been deleted' });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 }
-
-
 
 module.exports = {
     httpGetProducts,
@@ -208,5 +223,5 @@ module.exports = {
     httpUpdateProduct,
     httpUpdateProductImages,
     httpDeleteProduct,
-    uploadOptions
+    uploads
 }
