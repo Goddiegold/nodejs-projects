@@ -1,11 +1,11 @@
 const http = require('http');
 require('dotenv').config()
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 const app = require('./app');
-const { mongooseConnect } = require('./utils/mongo');
+const { mongooseConnect } = require('./utils/mongoose');
 
-const server = https.createServer(app);
+const server = http.createServer(app);
 
 const startServer = async () => {
     try {
