@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 
 const TokenBlacklist = require('../models/tokenblacklist.model');
+const handleError = require('./errors.handler');
 
 async function authToken(req, res, next) {
     try {
@@ -19,8 +20,28 @@ async function authToken(req, res, next) {
             next();
         });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        const errors = handleError(error);
+        if (errors) return res.status(400).json({ errors });
+
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 }
 
-module.exports = { authToken };
+async function authAdmin(req, res, next) {
+    try {
+        await authToken(req, res, () => {
+            if (req.user.isAdmin) {
+                next();
+            } else {
+                res.status(403).json({ message: 'Unauthorized' });
+            }
+        })
+    } catch (error) {
+        const errors = handleError(error);
+        if (errors) return res.status(400).json({ errors });
+
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+}
+
+module.exports = { authToken, authAdmin };

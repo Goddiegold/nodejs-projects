@@ -15,6 +15,9 @@ app.options('*', cors())
 // Enable parsing Json payload  in the request body
 app.use(express.json());
 
+// Logs information about incoming requests and outgoing responses in the terminal
+app.use(morgan('combined'));
+
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error(err.stack);
@@ -22,9 +25,6 @@ app.use((err, req, res, next) => {
     
     next()
 });
-
-// Logs information about incoming requests and outgoing responses in the terminal
-app.use(morgan('combined'));
 
 // Routes
 app.use('/public/uploads', express.static(__dirname + '/../public/uploads'));

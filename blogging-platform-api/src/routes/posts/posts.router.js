@@ -5,6 +5,7 @@ const { uploads } = require('../../utils/multer');
 const {
     httpGetPosts,
     httpGetPostByID,
+    httpGetPostByCategory,
     httpGetPostsCount,
     httpCreatePost,
     httpUpdatePost,
@@ -14,9 +15,10 @@ const {
 
 postsRouter.get('/', httpGetPosts);
 postsRouter.get('/:id', authToken, httpGetPostByID);
+postsRouter.get('/get/categories', httpGetPostByCategory);
 postsRouter.get('/get/count', authToken, httpGetPostsCount);
 postsRouter.post('/', authToken, uploads.single('image'), httpCreatePost);
-postsRouter.put('/', authToken, uploads.single('image'), httpUpdatePost);
-postsRouter.delete('/', authToken, httpDeletePost);
+postsRouter.put('/:id', authToken, uploads.single('image'), httpUpdatePost);
+postsRouter.delete('/:id', authToken, httpDeletePost);
 
 module.exports = postsRouter;

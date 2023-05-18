@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const User = require('../../models/users.model');
+const handleError = require('../../utils/errors.handler');
 
 async function httpGetUsers(req, res) {
     try {
@@ -8,27 +9,33 @@ async function httpGetUsers(req, res) {
             .sort('+surname')
             .select('-__v -createdAt -updatedAt -password -firstname -surname');
 
-        if (users.length === 0) return res.status(404).json({ error: 'No user found' });
+        if (users.length === 0) return res.status(204).json({ users: 'No Content' });
 
         res.status(200).json({ users });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const errors = handleError(error);
+        if (errors) return res.status(400).json({ errors });
+
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 }
 
 async function httpGetUserByID(req, res) {
     try {
         if (!mongoose.isValidObjectId(req.params.id))
-            return res.status(400).send('Invalid User Id');
+            return res.status(400).json({ user: 'Invalid ID' });
         
         const user = await User.findById(req.params.id)
             .select('-_id -__v -password');
 
-        if (!user) return res.status(404).json({ error: `User not found` });
+        if (!user) return res.status(404).json({ user: `Not Found` });
 
         res.status(200).json({ user });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const errors = handleError(error);
+        if (errors) return res.status(400).json({ errors });
+
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 }
 
@@ -36,18 +43,21 @@ async function httpGetUsersCount(req, res) {
     try {
         const usersCount = await User.countDocuments();
 
-        if (usersCount === 0) return res.status(404).json({ error: 'There is no user yet' });
+        if (usersCount === 0) return res.status(204).json({ users: 'No Content' });
 
         res.status(200).json({ usersCount });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const errors = handleError(error);
+        if (errors) return res.status(400).json({ errors });
+
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 }
 
 async function httpUpdateUser(req, res) {
     try {
-        const { _id } = req.user;
-        if (!_id) return res.status(404).json({ error: 'Unauthorizated' });
+        const user = req.user;
+        if (!user) return res.status(401).json({ user: 'Unauthorizated' });
 
         let fileName;
         let basePath;
@@ -57,7 +67,7 @@ async function httpUpdateUser(req, res) {
         }
         
         const updateUser = await User.findByIdAndUpdate(
-            _id,
+            user._id,
             {
                 firstname: req.body.firstname,
                 surname: req.body.surname,
@@ -69,27 +79,33 @@ async function httpUpdateUser(req, res) {
             { new: true }
         )
 
-        const updatedUser = await updateUser.save();
+        if (!updatedUser) return res.status(304).json({ user: 'Not Modified' });
 
-        const { firstname, surname, username, email, profilePicture } = updatedUser;
-        res.status(200).json({ firstname, surname, username, email, profilePicture });
+        res.status(200).json({ user: 'Modified' });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const errors = handleError(error);
+        if (errors) return res.status(400).json({ errors });
+
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 }
 
 async function httpDeleteUser(req, res) {
     try {
-        const { _id } = req.user;
-        if (!_id) return res.status(404).json({ error: 'Unauthorizated' });
+        const user = req.user;
+        if (!user) return res.status(404).json({ error: 'Unauthorizated' });
 
-        const user = await User.deleteOne({ _id });
+        const deletedUser = await User.deleteOne({ _id: user._id });
 
-        if (user.deletedCount === 0) return res.status(404).json({ error: 'User not deleted' });
+        if (deletedUser.deletedCount === 0) return res.status(417)
+            .json({ message: 'Expectation Failed' });
 
-        res.status(200).json({ message: 'User has been deleted' });
+        res.status(200).json({ message: 'Success' });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const errors = handleError(error);
+        if (errors) return res.status(400).json({ errors });
+
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 }
 

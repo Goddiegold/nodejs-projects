@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const Category = require('../../models/categories.model');
+const handleError = require('../../utils/errors.handler');
 
 // Get all categories
 const httpGetCategories = async (req, res) => {
@@ -9,27 +10,33 @@ const httpGetCategories = async (req, res) => {
             .select('name')
             .sort('+name');
       
-        if (cateories.length === 0) return res.status(404).json({ message: 'No category found' });
+        if (cateories.length === 0) return res.status(204).json({ cateories: 'No content' });
 
         res.status(200).json({ cateories });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const errors = handleError(error);
+        if (errors) return res.status(400).json({ errors });
+
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 }
 
 async function httpGetCategoryByID(req, res) {
     try {
         if (!mongoose.isValidObjectId(req.params.id))
-            return res.status(400).send('Invalid category Id');
+            return res.status(400).json({ category: 'Invalid ID' });
         
         const category = await Category.findById(req.params.id)
             .select('-_id -__v');
 
-        if (!category) return res.status(404).json({ error: `category not found` });
+        if (!category) return res.status(404).json({ category: 'Not Found' });
 
         res.status(200).json({ category });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const errors = handleError(error);
+        if (errors) return res.status(400).json({ errors });
+
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 }
 
@@ -37,21 +44,16 @@ async function httpGetCategoryByID(req, res) {
 const httpCreateCategory = async (req, res) => {
     try {
         const categoryName = req.body.category;
-        console.log('Creating category' + categoryName)
-
-        if (!categoryName) return res.status(400)
-            .json({ message: 'Please provide a category name' });
 
         const category = await Category.create({ name: categoryName });
-        if (!category) {
-            return res.status(404).json({ message: 'Category not created' });
-        }
+        if (!category) return res.status(501).json({ category: 'Not Implemented' })
 
-        const { _id, name } = category;
-
-        res.status(201).json({ _id, name });
+        res.status(201).json({ category: 'Created' });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const errors = handleError(error);
+        if (errors) return res.status(400).json({ errors });
+
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 }
 
@@ -59,7 +61,7 @@ const httpCreateCategory = async (req, res) => {
 const httpUpdateCategory = async (req, res) => {
     try {
         if (!mongoose.isValidObjectId(req.params.id))
-            return res.status(400).send('Invalid category Id');
+            return res.status(400).json({ category: 'Invalid ID' });
 
         const category = await Category.findByIdAndUpdate(
             req.params.id,
@@ -67,13 +69,14 @@ const httpUpdateCategory = async (req, res) => {
             { new: true }
         );
 
-        if (!category) return res.status(404).json({ error: 'Category was not updated' })
+        if (!category) return res.status(304).json({ category: 'Not Modified' })
 
-        const { name } = category;
-
-        res.json({ name });
+        res.status(200).json({ category: 'Modified' });
     } catch (error) {
-        res.status(500).json({ error: 'Internal server error' });
+        const errors = handleError(error);
+        if (errors) return res.status(400).json({ errors });
+
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 }
 
@@ -81,16 +84,19 @@ const httpUpdateCategory = async (req, res) => {
 const httpDeleteCategory = async (req, res) => {
     try {
         if (!mongoose.isValidObjectId(req.params.id))
-            return res.status(400).send('Invalid Post Id');
+            return res.status(400).json({ category: 'Invalid ID' });
 
         const cateory = await Category.findByIdAndDelete(req.params.id);
 
-        if (cateory.deletedCount === 0) return res.status(404)
-            .json({ error: 'Cateory not deleted' });
+        if (cateory.deletedCount === 0) return res.status(417)
+            .json({ message: 'Expectation Failed' });
 
-        res.json({ message: 'Cateory deleted successfully' });
+        res.status(200).json({ message: 'Success' });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const errors = handleError(error);
+        if (errors) return res.status(400).json({ errors });
+
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 }
 

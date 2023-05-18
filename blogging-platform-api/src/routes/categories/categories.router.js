@@ -1,6 +1,6 @@
 const categoriesRouter = require('express').Router();
 
-const { authToken } = require('../../utils/auth.middleware');
+const { authAdmin } = require('../../utils/auth.middleware');
 const {
     httpGetCategories,
     httpGetCategoryByID,
@@ -10,14 +10,14 @@ const {
 } = require('./categories.controller');
 
 // GET all category names and id (Private)
-categoriesRouter.get('/', authToken, httpGetCategories);
+categoriesRouter.get('/', authAdmin, httpGetCategories);
 // GET a single category names (Private)
-categoriesRouter.get('/:id', authToken, httpGetCategoryByID);
+categoriesRouter.get('/:id', authAdmin, httpGetCategoryByID);
 // Create a new category name (Private)
-categoriesRouter.post('/', authToken, httpCreateCategory);
+categoriesRouter.post('/', authAdmin, httpCreateCategory);
 // Update a category name (Private)
-categoriesRouter.put('/:id', authToken, httpUpdateCategory);
+categoriesRouter.put('/:id', authAdmin, httpUpdateCategory);
 // Delete a category name (Private)
-categoriesRouter.delete('/:id', authToken, httpDeleteCategory);
+categoriesRouter.delete('/:id', authAdmin, httpDeleteCategory);
 
 module.exports = categoriesRouter;

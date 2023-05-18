@@ -4,6 +4,7 @@ require('dotenv').config()
 
 const User = require('../../models/users.model');
 const TokenBlacklist = require('../../models/tokenblacklist.model');
+const handleError = require('../../utils/errors.handler');
 
 async function httpRegisterUser(req, res) {
     try {
@@ -11,15 +12,19 @@ async function httpRegisterUser(req, res) {
             {
                 username: req.body.username,
                 email: req.body.email,
-                password: req.body.password
+                password: req.body.password,
+                isAdmin: req.body.isAdmin
             }
         )
+        
+        if (!newCreatedUser) return res.status(501).json({ registration: 'Not Implemented' });
 
-        const { _id, username, email } = newCreatedUser;
-
-        res.status(201).json({ _id, username, email });
+        res.status(201).json({ user: 'Created' });
     } catch (error) {
-        res.status(401).json({ error: error.message });
+        const errors = handleError(error);
+        if (errors) return res.status(400).json({ errors });
+
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 }
 
@@ -38,20 +43,25 @@ async function httpLoginUser(req, res) {
             user = await User.findOne({ email: formattedEmail });
         }
 
-        if (!user) return res.status(401).json('Incorrect credentials')
+        if (!user) return res.status(401).json({ message: 'Incorrect credentials' });
 
         const auth = await bcrypt.compare(password, user.password);
-        if (!auth) return res.status(401).json('Incorrect credentials')
+        if (!auth) return res.status(401).json({ message: 'Incorrect credentials' });
 
         const accessToken = jwt.sign(
-            { _id: user._id },
+            { _id: user._id, isAdmin: user.isAdmin },
             process.env.JWT_SECRET_ACCESS_TOKEN,
             { expiresIn: '1d' }
         );
 
+        if (!accessToken) return res.status(501).json({ message: 'Login failed' });
+
         res.status(200).json({ accessToken });
     } catch (error) {
-        res.status(401).json({ error: error.message });
+        const errors = handleError(error);
+        if (errors) return res.status(400).json({ errors });
+
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 }
 
@@ -62,13 +72,18 @@ async function httpLogoutUser(req, res) {
 
         const token = authHeader.split(' ')[1];
 
-        await TokenBlacklist.create({ token });
+        const blacklist = await TokenBlacklist.create({ token });
+
+        if(!blacklist) return res.status(501).json({ logout: 'Not Implemented' })
 
         res.header('Content-Type', 'application/json');
 
         res.status(200).json({ message: 'Logout successful' });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const errors = handleError(error);
+        if (errors) return res.status(400).json({ errors });
+
+        res.status(500).json({ error: 'Internal Server Error' });
     }
 }
 
