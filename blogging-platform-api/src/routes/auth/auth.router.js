@@ -8,6 +8,6 @@ authRouter.post('/register', httpRegisterUser);
 // Sign in and gain access to more information (Public)
 authRouter.post('/login', httpLoginUser);
 // Sign out and logout (Private)
-authRouter.post('/logout', authToken, httpLogoutUser);
+authRouter.get('/logout', authToken, httpLogoutUser);
 
 module.exports = authRouter;

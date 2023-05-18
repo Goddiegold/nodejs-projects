@@ -9,7 +9,7 @@ async function httpGetUsers(req, res) {
             .sort('+surname')
             .select('-__v -createdAt -updatedAt -password -firstname -surname');
 
-        if (users.length === 0) return res.status(204).json({ users: 'No Content' });
+        if (users.length === 0) return res.status(404).json({ users: 'Not Found' });
 
         res.status(200).json({ users });
     } catch (error) {
@@ -79,7 +79,7 @@ async function httpUpdateUser(req, res) {
             { new: true }
         )
 
-        if (!updatedUser) return res.status(304).json({ user: 'Not Modified' });
+        if (!updateUser) return res.status(304).json({ user: 'Not Modified' });
 
         res.status(200).json({ user: 'Modified' });
     } catch (error) {

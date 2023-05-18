@@ -6,13 +6,13 @@ const handleError = require('../../utils/errors.handler');
 // Get all categories
 const httpGetCategories = async (req, res) => {
     try {
-        const cateories = await Category.find()
+        const categories = await Category.find()
             .select('name')
             .sort('+name');
       
-        if (cateories.length === 0) return res.status(204).json({ cateories: 'No content' });
+        if (categories.length === 0) return res.status(404).json({ categories: 'Not Found' });
 
-        res.status(200).json({ cateories });
+        res.status(200).json({ categories });
     } catch (error) {
         const errors = handleError(error);
         if (errors) return res.status(400).json({ errors });
@@ -67,10 +67,13 @@ const httpUpdateCategory = async (req, res) => {
             req.params.id,
             { name: req.body.category },
             { new: true }
-        );
+        )
+
+        await category.save();
 
         if (!category) return res.status(304).json({ category: 'Not Modified' })
 
+        res.header('Content-Type', 'application/json');
         res.status(200).json({ category: 'Modified' });
     } catch (error) {
         const errors = handleError(error);

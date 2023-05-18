@@ -10,7 +10,7 @@ const {
 } = require('./categories.controller');
 
 // GET all category names and id (Private)
-categoriesRouter.get('/', authAdmin, httpGetCategories);
+categoriesRouter.get('/', httpGetCategories);
 // GET a single category names (Private)
 categoriesRouter.get('/:id', authAdmin, httpGetCategoryByID);
 // Create a new category name (Private)

@@ -3,10 +3,15 @@
   "version": "1.0.0",
   "description": "",
   "main": "src/server.js",
+  "jest": {
+    "testEnvironment": "node",
+    "testTimeout": 1000000
+  },
   "scripts": {
     "start": "node src/server.js",
     "watch": "nodemon src/server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest --detectOpenHandles",
+    "test-watch": "jest --watch"
   },
   "keywords": [],
   "author": "",
